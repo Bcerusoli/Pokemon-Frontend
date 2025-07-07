@@ -138,9 +138,9 @@ const PokemonDetails = () => {
     };
 
     const handleUpdateNickname = () => {
-    const { id } = params; 
+    const pokemonEquipoId = pokemonDetails.id; 
 
-    if (!id) {
+    if (!pokemonEquipoId) {
         alert("No se encontró el ID del Pokémon en el equipo");
         return;
     }
@@ -150,7 +150,7 @@ const PokemonDetails = () => {
         return;
     }
 
-    axios.put(`http://localhost:3000/pokemonEquipos/${id}/nickname`, { apodo: nickname }, {
+    axios.put(`http://localhost:3000/pokemonEquipos/${pokemonEquipoId}/nickname`, { apodo: nickname }, {
         headers: {
             Authorization: `Bearer ${token}`,
         },
@@ -159,7 +159,7 @@ const PokemonDetails = () => {
             alert("Apodo actualizado correctamente");
             setPokemonDetails((prevDetails) => ({
                 ...prevDetails,
-                apodo: nickname, // Actualizar el estado con el nuevo apodo
+                apodo: nickname,
             }));
             setNickname("");
         })
@@ -619,7 +619,7 @@ const PokemonDetails = () => {
                             <Form.Label>Seleccionar una habilidad</Form.Label>
                             <Button
                                 variant="secondary"
-                                onClick={() => setShowHabilidades(!showHabilidades)} // Alternar visibilidad de la lista
+                                onClick={() => setShowHabilidades(!showHabilidades)} 
                                 style={{ marginBottom: "10px", width: "100%" }}
                             >
                                 {showHabilidades ? "Ocultar Habilidades" : "Mostrar Habilidades"}

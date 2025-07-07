@@ -167,7 +167,7 @@ const EquipoEdit = () => {
                                     <Button
                                         variant="primary"
                                         onClick={() => handleSelectPokemon(pokemon.pokemon?.id)}
-                                        disabled={!pokemon.pokemon?.id}
+                                        disabled={!pokemon.pokemon?.id} 
                                         className="ms-2"
                                     >
                                         Seleccionar
