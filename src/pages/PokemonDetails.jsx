@@ -28,6 +28,7 @@ const PokemonDetails = () => {
     const [showMovimientos, setShowMovimientos] = useState([false, false, false, false]); 
     
     useEffect(() => {
+        
         axios.get(`http://localhost:3000/pokemonEquipos/${params.pokemonId}/details`, {
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -35,8 +36,9 @@ const PokemonDetails = () => {
         })
             .then((res) => {
                 setPokemonDetails({
-                   ...res.data.pokemon,
-                    pokemonEquipoId: res.data.id, // Asignar el ID del Pokémon en el equipo
+                    ...res.data.pokemon,
+                    pokemonEquipoId: res.data.id,
+                    pokemonId: res.data.pokemon.id,
                     apodo: res.data.apodo || "Sin apodo",
                     imagen: res.data.pokemon.imagen,
                     ivHP: res.data.ivHP,
@@ -54,14 +56,43 @@ const PokemonDetails = () => {
                     baseDefensaEspecial: res.data.pokemon.baseDefensaEspecial,
                     baseVelocidad: res.data.pokemon.baseVelocidad,
                 });
-                setNickname(""); 
+                setNickname("");
+
+                
+                const basePokemonId = res.data.pokemon.id;
+                
+                axios.get(`http://localhost:3000/pokemonTipos/${basePokemonId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                })
+                    .then((resTipos) => {
+                        setPokemonDetails((prevDetails) => ({
+                            ...prevDetails,
+                            tipos: resTipos.data || [],
+                        }));
+                    })
+                    .catch((err) => {
+                        console.error("Error fetching pokemon types:", err);
+                        alert("Error al obtener los tipos del Pokémon");
+                    });
+                
+                axios.get(`http://localhost:3000/habilidades/${basePokemonId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                })
+                    .then((resHab) => {
+                        setHabilidades(resHab.data);
+                        setFilteredHabilidades(resHab.data);
+                    })
+                    .catch((err) => {
+                        console.error("Error fetching habilidades:", err);
+                        alert("Error al obtener la lista de habilidades");
+                    });
             })
             .catch((err) => {
                 console.error("Error fetching pokemon details:", err);
                 alert("Error al obtener los detalles del Pokémon");
             });
-            
-        // Obtener lista de ítems
+
+        
         axios.get("http://localhost:3000/items", {
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -69,58 +100,55 @@ const PokemonDetails = () => {
         })
             .then((res) => {
                 setItems(res.data);
-                setFilteredItems(res.data); 
+                setFilteredItems(res.data);
             })
             .catch((err) => {
                 console.error("Error fetching items:", err);
                 alert("Error al obtener la lista de ítems");
             });
-            axios.get(`http://localhost:3000/pokemonTipos/${params.pokemonId}`, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    })
-        .then((res) => {
-            setPokemonDetails((prevDetails) => ({
-                ...prevDetails,
-                tipos: res.data || [], // Añadir los tipos al estado
-            }));
-        })
-        .catch((err) => {
-            console.error("Error fetching pokemon types:", err);
-            alert("Error al obtener los tipos del Pokémon");
-        });
 
-        // Obtener lista de habilidades
-        axios.get(`http://localhost:3000/habilidades/${params.pokemonId}`, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        })
-            .then((res) => {
-                setHabilidades(res.data); 
-                setFilteredHabilidades(res.data); 
-            })
-            .catch((err) => {
-                console.error("Error fetching habilidades:", err);
-                alert("Error al obtener la lista de habilidades");
-            });
-
-        // Obtener lista de movimientos
+        
         axios.get(`http://localhost:3000/pokemonEquipoMovimientos/${params.pokemonId}/movimientos`, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
         })
             .then((res) => {
-                setMovimientos(res.data); 
-                setFilteredMovimientos([res.data, res.data, res.data, res.data]);
+                
+                if (res.data.movimientosDisponibles && Array.isArray(res.data.movimientosDisponibles)) {
+                    setMovimientos(res.data.movimientosDisponibles);
+                    setFilteredMovimientos([
+                        res.data.movimientosDisponibles,
+                        res.data.movimientosDisponibles,
+                        res.data.movimientosDisponibles,
+                        res.data.movimientosDisponibles
+                    ]);
+                    
+                    if (res.data.movimientosAsignados && Array.isArray(res.data.movimientosAsignados)) {
+                        const asignados = res.data.movimientosAsignados.map(
+                            (movId) => res.data.movimientosDisponibles.find((m) => m.id === movId) || null
+                        );
+                        setSelectedMovimientos([
+                            asignados[0] || null,
+                            asignados[1] || null,
+                            asignados[2] || null,
+                            asignados[3] || null
+                        ]);
+                    } else {
+                        setSelectedMovimientos([null, null, null, null]);
+                    }
+                } else {
+                    
+                    setMovimientos(res.data);
+                    setFilteredMovimientos([res.data, res.data, res.data, res.data]);
+                    setSelectedMovimientos([null, null, null, null]);
+                }
             })
             .catch((err) => {
                 console.error("Error fetching movimientos:", err);
                 alert("Error al obtener la lista de movimientos");
             });
-    }, [params.pokemonId, token]); 
+    }, [params.pokemonId, token]);
 
     const handleSliderChange = (attribute, value) => {
         setSliderValues((prevValues) => ({
@@ -138,22 +166,17 @@ const PokemonDetails = () => {
     };
 
     const handleUpdateNickname = () => {
-    const pokemonEquipoId = pokemonDetails.id; 
-
+    const pokemonEquipoId = pokemonDetails.pokemonEquipoId;
     if (!pokemonEquipoId) {
         alert("No se encontró el ID del Pokémon en el equipo");
         return;
     }
-
     if (!nickname.trim()) {
         alert("El apodo no puede estar vacío");
         return;
     }
-
     axios.put(`http://localhost:3000/pokemonEquipos/${pokemonEquipoId}/nickname`, { apodo: nickname }, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
     })
         .then(() => {
             alert("Apodo actualizado correctamente");
@@ -191,48 +214,41 @@ const PokemonDetails = () => {
     };
 
     const handleSelectItem = (itemId) => {
-    const { id } = params; 
-
-    if (!id) {
+    const pokemonEquipoId = pokemonDetails.pokemonEquipoId;
+    if (!pokemonEquipoId) {
         alert("No se encontró el ID del Pokémon en el equipo");
         return;
     }
-
-    axios.put(`http://localhost:3000/pokemonEquipos/${id}/item`, { itemId }, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
+    axios.put(`http://localhost:3000/pokemonEquipos/${pokemonEquipoId}/item`, { itemId }, {
+        headers: { Authorization: `Bearer ${token}` },
     })
         .then(() => {
             alert("Ítem asignado correctamente");
             setPokemonDetails((prevDetails) => ({
                 ...prevDetails,
-                itemId, 
+                itemId,
             }));
         })
         .catch((err) => {
             console.error("Error assigning item:", err);
             alert(`Error al asignar el ítem: ${err.response?.data?.message || "Error desconocido"}`);
         });
+
 };
     const handleSelectHabilidad = (habilidadId) => {
-    const { id } = params; 
-
-    if (!id) {
+    const pokemonEquipoId = pokemonDetails.pokemonEquipoId;
+    if (!pokemonEquipoId) {
         alert("No se encontró el ID del Pokémon en el equipo");
         return;
     }
-
-    axios.put(`http://localhost:3000/pokemonEquipos/${id}/habilidad`, { habilidadId }, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
+    axios.put(`http://localhost:3000/pokemonEquipos/${pokemonEquipoId}/habilidad`, { habilidadId }, {
+        headers: { Authorization: `Bearer ${token}` },
     })
         .then(() => {
             alert("Habilidad asignada correctamente");
             setPokemonDetails((prevDetails) => ({
                 ...prevDetails,
-                habilidadId, 
+                habilidadId,
             }));
         })
         .catch((err) => {
@@ -273,29 +289,30 @@ const PokemonDetails = () => {
     };
 
     const handleAssignMovimientos = () => {
-        
-        const movimientosIds = selectedMovimientos
-            .filter(mov => mov !== null)
-            .map(mov => mov.id);
+    const pokemonEquipoId = pokemonDetails.pokemonEquipoId;
+    const movimientosIds = selectedMovimientos
+        .filter(mov => mov !== null)
+        .map(mov => mov.id);
 
-        if (movimientosIds.length === 0) {
-            alert("Selecciona al menos un movimiento");
-            return;
-        }
-
-        axios.put(`http://localhost:3000/pokemonEquipoMovimientos/${params.id}/movimientos`, { movimientos: movimientosIds }, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
+    if (!pokemonEquipoId) {
+        alert("No se encontró el ID del Pokémon en el equipo");
+        return;
+    }
+    if (movimientosIds.length === 0) {
+        alert("Selecciona al menos un movimiento");
+        return;
+    }
+    axios.put(`http://localhost:3000/pokemonEquipoMovimientos/${pokemonEquipoId}/movimientos`, { movimientos: movimientosIds }, {
+        headers: { Authorization: `Bearer ${token}` },
+    })
+        .then(() => {
+            alert("Movimientos asignados correctamente");
         })
-            .then(() => {
-                alert("Movimientos asignados correctamente");
-            })
-            .catch((err) => {
-                console.error("Error assigning movimientos:", err);
-                alert(`Error al asignar los movimientos: ${err.response?.data?.message || "Error desconocido"}`);
-            });
-    };
+        .catch((err) => {
+            console.error("Error assigning movimientos:", err);
+            alert(`Error al asignar los movimientos: ${err.response?.data?.message || "Error desconocido"}`);
+        });
+};
 
 
 

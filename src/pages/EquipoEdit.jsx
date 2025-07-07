@@ -119,10 +119,9 @@ const EquipoEdit = () => {
             });
     };
 
-    const handleSelectPokemon = (pokemonId) => {
-        // Redirigir a la página de detalles del Pokémon
-        navigate(`/equipos/${params.id}/pokemon/${pokemonId}`);
-    };
+    const handleSelectPokemon = (pokemonEquipoId) => {
+    navigate(`/equipos/${params.id}/pokemon/${pokemonEquipoId}`);
+};
 
     return (
         <>
@@ -166,8 +165,8 @@ const EquipoEdit = () => {
                                     </Button>
                                     <Button
                                         variant="primary"
-                                        onClick={() => handleSelectPokemon(pokemon.pokemon?.id)}
-                                        disabled={!pokemon.pokemon?.id} 
+                                        onClick={() => handleSelectPokemon(pokemon.id)}
+                                        disabled={!pokemon.id}
                                         className="ms-2"
                                     >
                                         Seleccionar
